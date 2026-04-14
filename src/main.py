@@ -57,6 +57,52 @@ def main() -> None:
             "acousticness": 0.05,
             "tempo_bpm": 128,
         },
+        # ── Edge Case / Adversarial Profiles ──
+        "Conflicted (High Energy + Sad)": {
+            "genre": "pop",
+            "mood": "melancholic",
+            "energy": 0.92,
+            "valence": 0.30,
+            "danceability": 0.80,
+            "acousticness": 0.15,
+            "tempo_bpm": 135,
+        },
+        "Ghost Genre (genre not in catalog)": {
+            "genre": "reggaeton",
+            "mood": "happy",
+            "energy": 0.70,
+            "valence": 0.80,
+            "danceability": 0.85,
+            "acousticness": 0.30,
+            "tempo_bpm": 95,
+        },
+        "All Zeros (minimum everything)": {
+            "genre": "ambient",
+            "mood": "chill",
+            "energy": 0.0,
+            "valence": 0.0,
+            "danceability": 0.0,
+            "acousticness": 1.0,
+            "tempo_bpm": 50,
+        },
+        "All Maxed (maximum everything)": {
+            "genre": "metal",
+            "mood": "aggressive",
+            "energy": 1.0,
+            "valence": 1.0,
+            "danceability": 1.0,
+            "acousticness": 0.0,
+            "tempo_bpm": 200,
+        },
+        "Middle of the Road (all 0.5)": {
+            "genre": "jazz",
+            "mood": "relaxed",
+            "energy": 0.50,
+            "valence": 0.50,
+            "danceability": 0.50,
+            "acousticness": 0.50,
+            "tempo_bpm": 100,
+        },
     }
 
     for profile_name, user_prefs in profiles.items():
