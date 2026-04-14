@@ -17,17 +17,104 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world music recommenders like Spotify and YouTube Music combine two strategies: **collaborative filtering**, which finds songs loved by users with similar taste, and **content-based filtering**, which matches song attributes (tempo, energy, mood) directly to a user's preferences. Our simulation focuses on content-based filtering — we score each song in a 20-song catalog against a user's taste profile and recommend the highest-scoring matches.
 
-Some prompts to answer:
+### Data Flow
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+```
+Input (User Prefs)  -->  Process (Score Every Song)  -->  Output (Top K Ranked)
+```
 
-You can include a simple diagram or bullet list if helpful.
+1. A user profile and the full song catalog are loaded
+2. Each song is scored individually against the user's preferences
+3. All scores are sorted highest-to-lowest
+4. The top *k* songs are returned with explanations
+
+### Song Features
+
+Each `Song` object carries the following attributes from `data/songs.csv` (20 songs across 16 genres and 10 moods):
+
+- **genre** — categorical (pop, lofi, rock, ambient, jazz, synthwave, indie pop, r&b, hip-hop, classical, electronic, latin, metal, folk, funk, alternative)
+- **mood** — categorical (happy, chill, intense, relaxed, moody, focused, romantic, energetic, melancholic, nostalgic, aggressive, dreamy)
+- **energy** — float 0–1, how intense the track feels
+- **valence** — float 0–1, emotional positivity (high = happy, low = dark/moody)
+- **danceability** — float 0–1, how suitable for movement/rhythm
+- **acousticness** — float 0–1, organic vs. electronic production style
+- **tempo_bpm** — beats per minute (normalized to 0–1 scale for scoring)
+
+### UserProfile
+
+Each `UserProfile` stores seven preference fields:
+
+- **favorite_genre** — preferred genre (categorical)
+- **favorite_mood** — preferred mood (categorical)
+- **target_energy** — desired energy level (float 0–1)
+- **target_valence** — desired emotional positivity (float 0–1)
+- **target_danceability** — desired rhythm/groove level (float 0–1)
+- **target_acousticness** — preference for organic vs. electronic sound (float 0–1)
+- **target_tempo_bpm** — desired tempo in BPM (normalized for scoring)
+
+### Algorithm Recipe
+
+#### Scoring Rule (one song)
+
+Each song is scored against the user profile using two types of comparison:
+
+**Categorical bonuses** — flat points for exact matches:
+
+| Feature | Points | Rationale |
+|---------|--------|-----------|
+| Genre match | +2.0 | Strongest preference signal; defines the fundamental sound |
+| Mood match | +1.5 | Important but more flexible; people shift moods more easily than genres |
+
+**Numeric closeness** — rewards similarity to the user's target, not just high or low values:
+
+```
+feature_score = (1 - |user_preference - song_value|) x weight
+```
+
+| Feature | Weight | Rationale |
+|---------|--------|-----------|
+| Energy | x 1.0 | Core "vibe" indicator, strongest numeric signal |
+| Danceability | x 0.8 | Activity-driven, separates workout from study music |
+| Valence | x 0.7 | Emotional tone, distinguishes feel-good from brooding |
+| Acousticness | x 0.5 | Production style axis, less decisive on its own |
+| Tempo | x 0.3 | Correlates with energy, lowest independent contribution |
+
+**Total score** = genre bonus + mood bonus + sum of all weighted closeness scores
+
+**Maximum possible score: ~6.8** (all categorical matches + all numeric closeness near 1.0)
+
+#### Ranking Rule (all songs)
+
+All 20 songs are scored, sorted highest-to-lowest, and the top *k* results are returned with per-song explanations listing the point breakdown.
+
+### Test Profiles
+
+The system ships with three profiles to validate differentiation:
+
+| Field | Rock Fan | Lofi Studier | Party Starter |
+|-------|----------|-------------|---------------|
+| genre | rock | lofi | electronic |
+| mood | intense | chill | energetic |
+| energy | 0.90 | 0.35 | 0.95 |
+| valence | 0.50 | 0.58 | 0.75 |
+| danceability | 0.65 | 0.60 | 0.92 |
+| acousticness | 0.10 | 0.80 | 0.05 |
+| tempo_bpm | 150 | 75 | 128 |
+
+### CLI Output
+
+![CLI Output - Pop/Happy & Rock Fan](screenshot1.jpeg)
+![CLI Output - Lofi Studier & Party Starter](screenshot2.jpeg)
+
+### Expected Biases and Limitations
+
+- **Genre over-prioritization.** At 2.0 points, a genre match is worth more than any single numeric feature. A song that matches genre but misses on every other dimension can still outscore a near-perfect mood/energy match in a different genre. This means the system might ignore great songs that match the user's vibe but happen to be labeled differently.
+- **Exact-match penalty for categorical features.** "Indie pop" and "pop" share significant overlap, but the system treats them as completely different genres (0 points). Similarly, "chill" and "relaxed" are close in meaning but score as a total mismatch.
+- **No cross-user learning.** The system has no collaborative filtering — it cannot discover that users who like X also tend to like Y. Recommendations are limited to what the numeric attributes can capture.
+- **Catalog size bias.** With only 20 songs, genres with more entries (e.g., 2 latin songs vs. 1 classical) have a higher chance of appearing in results, independent of quality of match.
+- **Static taste assumption.** The profile is fixed — it cannot adapt to time of day, activity, or evolving taste within a session.
 
 ---
 
